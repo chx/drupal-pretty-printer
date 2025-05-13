@@ -1,0 +1,27 @@
+{
+    "name": "chx/drupal-pretty-printer",
+    "description": "Drupal pretty printer",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "nikic/php-parser": "^4.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "DrupalPrettyPrinter\\": "src"
+        }
+    },
+    "authors": [
+        {
+            "name": "Fran Garcia (fjgarlin)",
+            "role": "Developer"
+        },
+        {
+            "name": "Neil Drumm (drumm)",
+            "role": "Developer"
+        },
+        {
+            "name": "Karoly Negyesi (chx)",
+            "role": "Maintainer"
+        }
+    ]
+}
