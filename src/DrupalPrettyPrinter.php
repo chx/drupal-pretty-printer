@@ -121,10 +121,6 @@ class DrupalPrettyPrinter extends Standard {
     parent::__construct($options);
   }
 
-  public static function getPrinter(array $options = []): PrettyPrinterAbstract {
-    return class_exists(Int_::class) ? new DrupalPrettyPrinterV5($options) : new DrupalPrettyPrinterV4($options);
-  }
-
   /**
    * Returns information about invoke function names for Drupal code.
    *
