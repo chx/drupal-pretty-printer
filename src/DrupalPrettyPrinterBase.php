@@ -1010,7 +1010,7 @@ abstract class DrupalPrettyPrinterBase extends Standard {
   /**
    * Overrides printing of use statement to include HTML.
    */
-  protected function pUseType(int $type): string {
+  protected function pUseType($type): string {
     if (!$this->isHtml) {
       return parent::pUseType($type);
     }
