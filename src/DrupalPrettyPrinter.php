@@ -4,6 +4,7 @@
 
 namespace DrupalPrettyPrinter;
 
+use PhpParser\Node\Stmt;
 use PhpParser\Node\Stmt\UseUse;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Alias;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Precedence;
@@ -37,10 +38,8 @@ use PhpParser\Node\Expr\Cast;
 use PhpParser\Node\Scalar\MagicConst;
 use PhpParser\Node\Stmt\Nop;
 use PhpParser\Node\Stmt\InlineHTML;
-use PhpParser\Comment;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
-use PhpParser\Node\Stmt;
 use PhpParser\PrettyPrinter\Standard;
 
 /**
@@ -148,7 +147,7 @@ class DrupalPrettyPrinter extends Standard {
    */
   public function prettyPrintFile(array $stmts) : string {
     if (!$this->options['html']) {
-      return parent::prettyPrintFile($stmts);
+      return parent::prettyPrintFile($stmts) . "\n";
     }
 
     // Override to use HTML entities in output.
@@ -176,12 +175,12 @@ class DrupalPrettyPrinter extends Standard {
    * Returns spaces according to the number given.
    *
    * @param int $number
-   *   Number of spaces to return. Defaults to 4.
+   *   Number of spaces to return. Defaults to 2.
    *
    * @return string
    *   String of spaces.
    */
-  protected function spaces($number = 4) {
+  protected function spaces($number = 2) {
     return \str_repeat(' ', $number);
   }
 
@@ -308,12 +307,16 @@ class DrupalPrettyPrinter extends Standard {
   protected function pComments(array $comments) : string {
     $formattedComments = [];
     foreach ($comments as $comment) {
-      $comment_text = str_replace("\n", $this->nl, $comment->getReformattedText());
+      $reformattedText = $comment->getReformattedText();
+      $comment_text = str_replace("\n", $this->nl, $reformattedText);
+      if (str_starts_with($reformattedText, "/**\n * @file")) {
+        $comment_text .= "\n";
+      }
       if ($this->options['html']) {
         $comment_text = htmlentities($comment_text);
       }
 
-      if ($this->findCommentPrefix($comment) !== '//') {
+      if (preg_match("/[\r\n]/", $comment_text)) {
         $comment_text = $this->nl . $comment_text;
       }
 
@@ -330,25 +333,6 @@ class DrupalPrettyPrinter extends Standard {
     }
 
     return $span . implode($endspan . $this->nl . $span, $formattedComments) . $endspan;
-  }
-
-  /**
-   * Figures out the comment prefix.
-   *
-   * @param \PhpParser\Comment $comment
-   *   Comment object.
-   *
-   * @return string
-   *   '//' if this is a single-line comment, or /** or /* if it is a multi-
-   *   line comment.
-   */
-  protected function findCommentPrefix(Comment $comment) {
-    $text = trim(preg_replace('|\s|', ' ', $comment->getText()));
-    if (!$text) {
-      return '';
-    }
-    $tokens = explode(' ', $text);
-    return $tokens[0];
   }
 
   /**
@@ -479,13 +463,14 @@ class DrupalPrettyPrinter extends Standard {
    * Overrides method call printing to add HTML spans and split into lines.
    */
   protected function pExpr_MethodCall(MethodCall $node) {
-    if (!$this->options['html'] || $this->state['in_string']) {
-      // Only split into lines if we're not inside a string.
-      $newline = ($this->state['in_string']) ? '' : $this->nl;
+    if (!$this->options['html']) {
+      return parent::pExpr_MethodCall($node);
+    }
+    if ($this->state['in_string']) {
       return $this->pDereferenceLhs($node->var) .
-        $newline . '->' .
+        '->' .
         $this->pObjectProperty($node->name) .
-        '(' . $this->pOurMaybeMultiline($node->args) . ')';
+        '(' . $this->pMaybeMultiline($node->args) . ')';
     }
 
     $variable = $this->pDereferenceLhs($node->var);
@@ -1089,27 +1074,27 @@ class DrupalPrettyPrinter extends Standard {
   }
 
   /**
-   * The original pMaybeMultiline function was private; make our own.
+   * Drupal uses 2 spaces to indent instead of 4.
    */
-  private function pOurMaybeMultiline(array $nodes, $trailingComma = FALSE) {
-    if (!$this->ourHasNodeWithComments($nodes)) {
-      return $this->pCommaSeparated($nodes);
-    }
-    else {
-      return $this->pCommaSeparatedMultiline($nodes, $trailingComma) . "\n";
-    }
+  protected function indent() {
+    $this->indentLevel += 2;
+    $this->nl .= '  ';
   }
 
   /**
-   * The original hasNodeWithComments function was private; make our own.
+   * Drupal uses 2 spaces to indent instead of 4.
    */
-  protected function ourHasNodeWithComments(array $nodes) {
-    foreach ($nodes as $node) {
-      if ($node && $node->getAttribute('comments')) {
-        return TRUE;
-      }
-    }
-    return FALSE;
+  protected function outdent() {
+    assert($this->indentLevel >= 2);
+    $this->indentLevel -= 2;
+    $this->nl = "\n" . str_repeat(' ', $this->indentLevel);
+  }
+
+  /**
+   * Add a line break after break;
+   */
+  protected function pStmt_Break(Stmt\Break_ $node) {
+    return parent::pStmt_Break($node) ."\n";
   }
 
 }

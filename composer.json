@@ -5,6 +5,12 @@
     "require": {
         "nikic/php-parser": "^4.7"
     },
+    "require-dev": {
+        "drupal/coder": "^8.3.10"
+    },
+    "scripts": {
+        "phpcs": "phpcs --standard=phpcs.xml.dist --"
+    },
     "autoload": {
         "psr-4": {
             "DrupalPrettyPrinter\\": "src"
@@ -23,5 +29,10 @@
             "name": "Karoly Negyesi (chx)",
             "role": "Maintainer"
         }
-    ]
+    ],
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
 }
