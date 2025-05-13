@@ -86,6 +86,16 @@ class DrupalPrettyPrinter extends Standard {
   ];
 
   /**
+   * TRUE (default) to add HTML spans to the code.
+   */
+  protected bool $isHtml;
+
+  /**
+   * TRUE (default) if this is Drupal code.
+   */
+  protected bool $isDrupal;
+
+  /**
    * Constructs an ApiPrettyPrinter object.
    *
    * @param array $options
@@ -98,10 +108,11 @@ class DrupalPrettyPrinter extends Standard {
    *     effect if the "html" option is FALSE.
    */
   public function __construct(array $options = []) {
+    $this->isHtml = $options['html'] ?? TRUE;
+    $this->isDrupal = $options['isDrupal'] ?? TRUE;
+
     $options += [
       'shortArraySyntax' => TRUE,
-      'html' => TRUE,
-      'isDrupal' => TRUE,
     ];
 
     parent::__construct($options);
@@ -147,7 +158,7 @@ class DrupalPrettyPrinter extends Standard {
    * {@inheritdoc}
    */
   public function prettyPrintFile(array $stmts) : string {
-    if (!$this->options['html']) {
+    if (!$this->isHtml) {
       return parent::prettyPrintFile($stmts) . "\n";
     }
 
@@ -248,7 +259,7 @@ class DrupalPrettyPrinter extends Standard {
       'Stmt_Unset',
     ];
 
-    if ($this->options['html'] && !$this->state['in_string']) {
+    if ($this->isHtml && !$this->state['in_string']) {
       // Overrides of certain simple statements if we are adding HTML and
       // not currently printing a string.
       if ($node instanceof MagicConst) {
@@ -284,8 +295,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides constant printing to add HTML.
    */
-  protected function pConst(NodeConst_ $node) {
-    if (!$this->options['html']) {
+  protected function pConst(NodeConst_ $node): string {
+    if (!$this->isHtml) {
       return parent::pConst($node);
     }
 
@@ -313,7 +324,7 @@ class DrupalPrettyPrinter extends Standard {
       if (str_starts_with($reformattedText, "/**\n * @file")) {
         $comment_text .= "\n";
       }
-      if ($this->options['html']) {
+      if ($this->isHtml) {
         $comment_text = htmlentities($comment_text);
       }
 
@@ -324,7 +335,7 @@ class DrupalPrettyPrinter extends Standard {
       $formattedComments[] = $comment_text;
     }
 
-    if ($this->options['html']) {
+    if ($this->isHtml) {
       $span = '<span class="php-comment">';
       $endspan = '</span>';
     }
@@ -339,8 +350,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides string printing to add HTML spans and keep track of state.
    */
-  protected function pScalar_String(String_ $node) {
-    if (!$this->options['html'] || $this->state['in_string']) {
+  protected function pScalar_String(String_ $node): string {
+    if (!$this->isHtml || $this->state['in_string']) {
       return parent::pScalar_String($node);
     }
 
@@ -368,7 +379,7 @@ class DrupalPrettyPrinter extends Standard {
    * Overrides string printing to add HTML spans.
    */
   protected function pScalar_Encapsed(Encapsed $node) {
-    if (!$this->options['html']) {
+    if (!$this->isHtml) {
       return parent::pScalar_Encapsed($node);
     }
 
@@ -392,11 +403,11 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides variable printing to add HTML spans.
    */
-  protected function pExpr_Variable(Variable $node) {
+  protected function pExpr_Variable(Variable $node): string {
     $output = parent::pExpr_Variable($node);
 
     // Add the HTML spans only if we aren't inside a string.
-    if ($this->options['html'] && !$this->state['in_string']) {
+    if ($this->isHtml && !$this->state['in_string']) {
       $output = '<span class="php-variable">' . $output . '</span>';
     }
 
@@ -419,7 +430,7 @@ class DrupalPrettyPrinter extends Standard {
     // If the string consists only of legal function characters, it could
     // be a theme hook name, element name, or hook name, if this is Drupal
     // code.
-    if ($string && $this->options['isDrupal'] &&
+    if ($string && $this->isDrupal &&
       preg_match('|^' . Parser::RE_FUNCTION_CHARACTERS . '$|', $string)) {
       if ($this->state['in_array'] && isset($this->state['array_key'])) {
         if ($this->state['array_key'] == '#theme') {
@@ -444,8 +455,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides function call printing to add HTML spans and keep track of state.
    */
-  protected function pExpr_FuncCall(FuncCall $node) {
-    if (!$this->options['html'] || $this->state['in_string']) {
+  protected function pExpr_FuncCall(FuncCall $node): string {
+    if (!$this->isHtml || $this->state['in_string']) {
       return parent::pExpr_FuncCall($node);
     }
 
@@ -463,8 +474,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides method call printing to add HTML spans and split into lines.
    */
-  protected function pExpr_MethodCall(MethodCall $node) {
-    if (!$this->options['html']) {
+  protected function pExpr_MethodCall(MethodCall $node): string {
+    if (!$this->isHtml) {
       return parent::pExpr_MethodCall($node);
     }
     if ($this->state['in_string']) {
@@ -503,8 +514,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides static method call printing to add HTML spans.
    */
-  protected function pExpr_StaticCall(StaticCall $node) {
-    if (!$this->options['html'] || $this->state['in_string']) {
+  protected function pExpr_StaticCall(StaticCall $node): string {
+    if (!$this->isHtml || $this->state['in_string']) {
       return parent::pExpr_StaticCall($node);
     }
 
@@ -538,7 +549,7 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides function argument printing to keep track of state.
    */
-  protected function pArg(Arg $node) {
+  protected function pArg(Arg $node): string {
     $output = parent::pArg($node);
     $this->state['first_argument'] = FALSE;
     return $output;
@@ -547,8 +558,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides function parameter printing to add HTML.
    */
-  protected function pParam(Param $node) {
-    if (!$this->options['html'] || $this->state['in_string']) {
+  protected function pParam(Param $node): string {
+    if (!$this->isHtml || $this->state['in_string']) {
       return parent::pParam($node);
     }
 
@@ -567,8 +578,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides property fetch printing to add HTML.
    */
-  protected function pExpr_PropertyFetch(PropertyFetch $node) {
-    if (!$this->options['html'] || $this->state['in_string']) {
+  protected function pExpr_PropertyFetch(PropertyFetch $node): string {
+    if (!$this->isHtml || $this->state['in_string']) {
       return parent::pExpr_PropertyFetch($node);
     }
 
@@ -591,8 +602,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides static property fetch printing to add HTML.
    */
-  protected function pExpr_StaticPropertyFetch(StaticPropertyFetch $node) {
-    if (!$this->options['html'] || $this->state['in_string']) {
+  protected function pExpr_StaticPropertyFetch(StaticPropertyFetch $node): string {
+    if (!$this->isHtml || $this->state['in_string']) {
       return parent::pExpr_StaticPropertyFetch($node);
     }
 
@@ -647,7 +658,7 @@ class DrupalPrettyPrinter extends Standard {
    *
    * @see self::pExprArrayItem
    */
-  protected function pExpr_Array(Array_ $node) {
+  protected function pExpr_Array(Array_ $node): string {
     $syntax = $node->getAttribute('kind',
       $this->options['shortArraySyntax'] ? Array_::KIND_SHORT : Array_::KIND_LONG);
     if (empty($node->items)) {
@@ -661,7 +672,7 @@ class DrupalPrettyPrinter extends Standard {
       return '[' . $items . ']';
     }
     else {
-      if ($this->options['html'] && !$this->state['in_string']) {
+      if ($this->isHtml && !$this->state['in_string']) {
         return '<span class="php-keyword">array</span>(' . $items . ')';
       }
       else {
@@ -687,7 +698,7 @@ class DrupalPrettyPrinter extends Standard {
     }
     $this->state['in_array'] = TRUE;
 
-    $amp = (($this->options['html'] && !$this->state['in_string']) ? htmlentities('&') : '&');
+    $amp = (($this->isHtml && !$this->state['in_string']) ? htmlentities('&') : '&');
 
     $result .= (NULL !== $key ? $key . ' => ' : '')
       . ($node->byRef ? $amp : '') . $this->p($node->value);
@@ -717,7 +728,7 @@ class DrupalPrettyPrinter extends Standard {
       $output .= $this->nl;
     }
 
-    if ($this->options['html']) {
+    if ($this->isHtml) {
       $output .= '<span class="php-keyword">' . $keyword . '</span>';
     }
     else {
@@ -745,8 +756,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides new printing to add HTML.
    */
-  protected function pExpr_New(New_ $node) {
-    if ($this->options['html']) {
+  protected function pExpr_New(New_ $node): string {
+    if ($this->isHtml) {
       $new = '<span class="php-keyword">new</span> ';
       $class_span = '<span class="php-function-or-constant">';
       $class_end_span = '</span>';
@@ -773,8 +784,8 @@ class DrupalPrettyPrinter extends Standard {
    * - Leave a blank line before the }.
    * - Add HTML.
    */
-  protected function pStmt_Interface(Interface_ $node) {
-    if ($this->options['html']) {
+  protected function pStmt_Interface(Interface_ $node): string {
+    if ($this->isHtml) {
       return '<span class="php-keyword">interface</span> <span class="php-function-or-constant">' . $node->name . '</span>' .
         (!empty($node->extends) ? ' <span class="php-keyword">extends</span> ' . $this->pCommaSeparated($node->extends) : '') .
         ' {' . $this->pStmts($node->stmts) . "\n\n" . '}';
@@ -794,8 +805,8 @@ class DrupalPrettyPrinter extends Standard {
    * - Leave a blank line before the }.
    * - Add HTML.
    */
-  protected function pStmt_Trait(Trait_ $node) {
-    if ($this->options['html']) {
+  protected function pStmt_Trait(Trait_ $node): string {
+    if ($this->isHtml) {
       return '<span class="php-keyword">trait</span> <span class="php-function-or-constant">' . $node->name . '</span>' .
         ' {' . $this->pStmts($node->stmts) . "\n\n" . '}';
     }
@@ -812,9 +823,9 @@ class DrupalPrettyPrinter extends Standard {
    * - Leave a blank line before the }.
    * - Add HTML.
    */
-  protected function pClassCommon(Class_ $node, $afterClassToken) {
+  protected function pClassCommon(Class_ $node, $afterClassToken): string {
     $afterClassToken = trim($afterClassToken);
-    if ($this->options['html']) {
+    if ($this->isHtml) {
       return $this->pModifiers($node->flags) .
         '<span class="php-keyword">class</span> <span class="php-function-or-constant">' . $afterClassToken . '</span>' .
         (NULL !== $node->extends ? ' <span class="php-keyword">extends</span> ' . $this->p($node->extends) : '') .
@@ -833,8 +844,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides function printing to put the { on the same line and add HTML.
    */
-  protected function pStmt_Function(Function_ $node) {
-    if ($this->options['html']) {
+  protected function pStmt_Function(Function_ $node): string {
+    if ($this->isHtml) {
       $function = '<span class="php-keyword">function</span> ';
       $name_span = '<span class="php-function-or-constant-declared">';
       $name_end_span = '</span>';
@@ -857,8 +868,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides class method printing to put the { on the same line.
    */
-  protected function pStmt_ClassMethod(ClassMethod $node) {
-    if ($this->options['html']) {
+  protected function pStmt_ClassMethod(ClassMethod $node): string {
+    if ($this->isHtml) {
       $function = '<span class="php-keyword">function</span> ';
       $name_span = '<span class="php-function-or-constant">';
       $name_end_span = '</span>';
@@ -888,8 +899,8 @@ class DrupalPrettyPrinter extends Standard {
    * - Space between the 'use' keyword and the use statements.
    * - Add HTML spans.
    */
-  protected function pExpr_Closure(Closure $node) {
-    if ($this->options['html']) {
+  protected function pExpr_Closure(Closure $node): string {
+    if ($this->isHtml) {
       $span = '<span class="php-keyword">';
       $endspan = '</span>';
       $amp = htmlentities('&');
@@ -911,8 +922,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides class constant printing to include HTML.
    */
-  protected function pStmt_ClassConst(ClassConst $node) {
-    if (!$this->options['html']) {
+  protected function pStmt_ClassConst(ClassConst $node): string {
+    if (!$this->isHtml) {
       return parent::pStmt_ClassConst($node);
     }
 
@@ -924,8 +935,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides constant printing to include HTML.
    */
-  protected function pStmt_Const(StmtConst_ $node) {
-    if (!$this->options['html']) {
+  protected function pStmt_Const(StmtConst_ $node): string {
+    if (!$this->isHtml) {
       return parent::pStmt_Const($node);
     }
 
@@ -936,8 +947,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides printing of start/end ?php tags to include HTML.
    */
-  protected function pStmt_InlineHTML(InlineHTML $node) {
-    if (!$this->options['html']) {
+  protected function pStmt_InlineHTML(InlineHTML $node): string {
+    if (!$this->isHtml) {
       return parent::pStmt_InlineHTML($node);
     }
 
@@ -951,8 +962,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides namespace printing to include HTML.
    */
-  protected function pStmt_Namespace(Namespace_ $node) {
-    if (!$this->options['html']) {
+  protected function pStmt_Namespace(Namespace_ $node): string {
+    if (!$this->isHtml) {
       return parent::pStmt_Namespace($node);
     }
 
@@ -972,8 +983,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides printing of use statement to include HTML.
    */
-  protected function pStmt_Use(Use_ $node) {
-    if (!$this->options['html']) {
+  protected function pStmt_Use(Use_ $node): string {
+    if (!$this->isHtml) {
       return parent::pStmt_Use($node);
     }
 
@@ -984,8 +995,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides printing of use statement to include HTML.
    */
-  protected function pStmt_GroupUse(GroupUse $node) {
-    if (!$this->options['html']) {
+  protected function pStmt_GroupUse(GroupUse $node): string {
+    if (!$this->isHtml) {
       return parent::pStmt_GroupUse($node);
     }
 
@@ -998,8 +1009,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides printing of use statement to include HTML.
    */
-  protected function pStmt_TraitUse(TraitUse $node) {
-    if (!$this->options['html']) {
+  protected function pStmt_TraitUse(TraitUse $node): string {
+    if (!$this->isHtml) {
       return parent::pStmt_TraitUse($node);
     }
 
@@ -1012,8 +1023,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides printing of use statement to include HTML.
    */
-  protected function pStmt_TraitUseAdaptation_Precedence(Precedence $node) {
-    if (!$this->options['html']) {
+  protected function pStmt_TraitUseAdaptation_Precedence(Precedence $node): string {
+    if (!$this->isHtml) {
       return parent::pStmt_TraitUseAdaptation_Precedence($node);
     }
 
@@ -1028,8 +1039,8 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides printing of use statement to include HTML.
    */
-  protected function pStmt_TraitUseAdaptation_Alias(Alias $node) {
-    if (!$this->options['html']) {
+  protected function pStmt_TraitUseAdaptation_Alias(Alias $node): string {
+    if (!$this->isHtml) {
       return parent::pStmt_TraitUseAdaptation_Alias($node);
     }
 
@@ -1052,7 +1063,7 @@ class DrupalPrettyPrinter extends Standard {
    * Overrides printing of use statement to include HTML.
    */
   protected function pStmt_UseUse(UseUse $node) {
-    if (!$this->options['html']) {
+    if (!$this->isHtml) {
       return parent::pStmt_UseUse($node);
     }
 
@@ -1068,7 +1079,7 @@ class DrupalPrettyPrinter extends Standard {
   protected function pOurUseType($type) {
     $keyword = $type === Use_::TYPE_FUNCTION ? 'function'
       : ($type === Use_::TYPE_CONSTANT ? 'const' : '');
-    if (!$keyword || !$this->options['html']) {
+    if (!$keyword || !$this->isHtml) {
       return $keyword;
     }
     return '<span class="php-keyword">' . $keyword . '</span> ';
@@ -1077,7 +1088,7 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Drupal uses 2 spaces to indent instead of 4.
    */
-  protected function indent() {
+  protected function indent(): void {
     $this->indentLevel += 2;
     $this->nl .= '  ';
   }
@@ -1085,7 +1096,7 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Drupal uses 2 spaces to indent instead of 4.
    */
-  protected function outdent() {
+  protected function outdent(): void {
     assert($this->indentLevel >= 2);
     $this->indentLevel -= 2;
     $this->nl = "\n" . str_repeat(' ', $this->indentLevel);
@@ -1094,7 +1105,7 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Add a line break after break;
    */
-  protected function pStmt_Break(Stmt\Break_ $node) {
+  protected function pStmt_Break(Stmt\Break_ $node): string {
     return parent::pStmt_Break($node) ."\n";
   }
 
