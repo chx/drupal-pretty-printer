@@ -89,7 +89,7 @@ class DrupalPrettyPrinter extends Standard {
   ];
 
   /**
-   * TRUE (default) to add HTML spans to the code.
+   * TRUE to add HTML spans to the code.
    */
   protected bool $isHtml;
 
@@ -106,12 +106,12 @@ class DrupalPrettyPrinter extends Standard {
    *   - shortArraySyntax: TRUE to use [] when printing arrays instead of
    *     array(), for unspecified arrays. Default is TRUE, unlike the base
    *     class.
-   *   - html: TRUE (default) to add HTML spans to the code.
+   *   - html: TRUE to add HTML spans to the code.
    *   - isDrupal: TRUE (default) if this is Drupal code. Note this has no
    *     effect if the "html" option is FALSE.
    */
   public function __construct(array $options = []) {
-    $this->isHtml = $options['html'] ?? TRUE;
+    $this->isHtml = $options['html'] ?? FALSE;
     $this->isDrupal = $options['isDrupal'] ?? TRUE;
 
     $options += [
