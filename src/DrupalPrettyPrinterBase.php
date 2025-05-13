@@ -4,8 +4,8 @@
 
 namespace DrupalPrettyPrinter;
 
+use PhpParser\Node\Scalar\Int_;
 use PhpParser\Node\Stmt;
-use PhpParser\Node\Stmt\UseUse;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Alias;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Precedence;
 use PhpParser\Node\Stmt\TraitUse;
@@ -31,16 +31,14 @@ use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\Variable;
-use PhpParser\Node\Scalar\Encapsed;
 use PhpParser\Node\Scalar\String_;
 use PhpParser\Node\Const_ as NodeConst_;
-use PhpParser\Node\Expr\Cast;
-use PhpParser\Node\Scalar\MagicConst;
 use PhpParser\Node\Stmt\Nop;
 use PhpParser\Node\Stmt\InlineHTML;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\PrettyPrinter\Standard;
+use PhpParser\PrettyPrinterAbstract;
 
 /**
  * Pretty-prints code for Drupal coding standards and HTML output.
@@ -59,7 +57,7 @@ use PhpParser\PrettyPrinter\Standard;
  * - Chained methods are split into lines.
  * - Space at ends of lines is removed.
  */
-class DrupalPrettyPrinter extends Standard {
+abstract class DrupalPrettyPrinterBase extends Standard {
 
   /**
    * Current state, to keep track of certain function calls and the like.
@@ -116,6 +114,10 @@ class DrupalPrettyPrinter extends Standard {
     ];
 
     parent::__construct($options);
+  }
+
+  public static function getPrinter(array $options = []): PrettyPrinterAbstract {
+    return class_exists(Int_::class) ? new DrupalPrettyPrinterV5($options) : new DrupalPrettyPrinterV4($options);
   }
 
   /**
@@ -229,70 +231,6 @@ class DrupalPrettyPrinter extends Standard {
   }
 
   /**
-   * Overrides pretty-printing of nodes to add HTML in some cases.
-   *
-   * @param \PhpParser\Node $node
-   *   Node to be pretty printed.
-   * @param bool $parentFormatPreserved
-   *   Preserve parent format or not.
-   *
-   * @return string
-   *   Pretty printed node.
-   */
-  protected function p(Node $node, $parentFormatPreserved = false) : string {
-    $type = $node->getType();
-    $type_pieces = explode('_', $type);
-
-    if ($type == 'Stmt_If' || $type == 'Stmt_ElseIf' || $type == 'Stmt_Else') {
-      // Override of if-type statements even if it is not HTML.
-      $keyword = strtolower(array_pop($type_pieces));
-      return $this->printIfLike($node, $keyword);
-    }
-
-    $easy_types = ['Expr_Isset', 'Expr_List', 'Expr_Clone',
-      'Expr_Include', 'Expr_Exit', 'Expr_Empty', 'Expr_Eval',
-      'Stmt_For', 'Stmt_Foreach', 'Stmt_While', 'Stmt_Do',
-      'Stmt_Switch', 'Stmt_Case',
-      'Stmt_TryCatch', 'Stmt_Catch', 'Stmt_Throw',
-      'Stmt_Finally', 'Stmt_Break', 'Stmt_Continue',
-      'Stmt_Return', 'Stmt_Goto', 'Stmt_Echo', 'Stmt_Static', 'Stmt_Global',
-      'Stmt_Unset',
-    ];
-
-    if ($this->isHtml && !$this->state['in_string']) {
-      // Overrides of certain simple statements if we are adding HTML and
-      // not currently printing a string.
-      if ($node instanceof MagicConst) {
-        $output = parent::p($node, $parentFormatPreserved);
-        return '<span class="php-keyword">' . $output . '</span>';
-      }
-      elseif ($type == 'Scalar_LNumber' || $type == 'Scalar_DNumber') {
-        $output = parent::p($node, $parentFormatPreserved);
-        return '<span class="php-constant">' . $output . '</span>';
-      }
-      elseif ($node instanceof Cast) {
-        $cast_type = strtolower(array_pop($type_pieces));
-        return $this->pPrefixOp(get_class($node), '(<span class="php-keyword">' . $cast_type . '</span>) ', $node->expr);
-      }
-      elseif ($type == 'Expr_ConstFetch') {
-        $output = parent::p($node, $parentFormatPreserved);
-        return '<span class="php-function-or-constant">' . $output . '</span>';
-      }
-      elseif (in_array($type, $easy_types)) {
-        // In all of these types, the parent class output starts with a PHP
-        // keyword, possibly preceded by a space. Wrap the keyword in a span.
-        $output = parent::p($node, $parentFormatPreserved);
-        $output = preg_replace('|^( *)([a-z]+)|', '$1<span class="php-keyword">$2</span>', $output);
-        return $output;
-      }
-
-    }
-
-    // If we have not overridden anything and returned already, use the parent.
-    return parent::p($node, $parentFormatPreserved);
-  }
-
-  /**
    * Overrides constant printing to add HTML.
    */
   protected function pConst(NodeConst_ $node): string {
@@ -375,14 +313,7 @@ class DrupalPrettyPrinter extends Standard {
     }
   }
 
-  /**
-   * Overrides string printing to add HTML spans.
-   */
-  protected function pScalar_Encapsed(Encapsed $node) {
-    if (!$this->isHtml) {
-      return parent::pScalar_Encapsed($node);
-    }
-
+  protected function addHtmlToEncapsed(Node $node) {
     unset($this->state['last_string']);
 
     if ($node->getAttribute('kind') === String_::KIND_HEREDOC) {
@@ -431,7 +362,7 @@ class DrupalPrettyPrinter extends Standard {
     // be a theme hook name, element name, or hook name, if this is Drupal
     // code.
     if ($string && $this->isDrupal &&
-      preg_match('|^' . Parser::RE_FUNCTION_CHARACTERS . '$|', $string)) {
+      preg_match('|^[a-zA-Z0-9_\x7f-\xff]+$|', $string)) {
       if ($this->state['in_array'] && isset($this->state['array_key'])) {
         if ($this->state['array_key'] == '#theme') {
           $class .= ' potential-theme';
@@ -442,7 +373,12 @@ class DrupalPrettyPrinter extends Standard {
       }
       elseif (count($this->state['function_calls'])) {
         $last = ($this->state['function_calls'][count($this->state['function_calls']) - 1]);
-        $last = Formatter::asString($last);
+        if (is_object($last) && method_exists($last, 'toString')) {
+          $last = $last->toString();
+        }
+        if (!isset($last) || !is_string($last)) {
+          $last = '';
+        }
         if (isset($invoke_functions_info[$last])) {
           $class .= ' potential-' . $invoke_functions_info[$last][0];
         }
@@ -659,8 +595,9 @@ class DrupalPrettyPrinter extends Standard {
    * @see self::pExprArrayItem
    */
   protected function pExpr_Array(Array_ $node): string {
+    $isShortArraySyntax = $this->shortArraySyntax ?? $this->options['shortArraySyntax'];
     $syntax = $node->getAttribute('kind',
-      $this->options['shortArraySyntax'] ? Array_::KIND_SHORT : Array_::KIND_LONG);
+      $isShortArraySyntax ? Array_::KIND_SHORT : Array_::KIND_LONG);
     if (empty($node->items)) {
       $items = '';
     }
@@ -714,7 +651,7 @@ class DrupalPrettyPrinter extends Standard {
    *
    * Overrides the default to have the { on the same line, and add HTML.
    *
-   * @param \PhpParser\Node $node
+   * @param \PhpParser\Node\Stmt\If_|\PhpParser\Node\Stmt\Else_|\PhpParser\Node\Stmt\ElseIf_ $node
    *   If, else, or elseif statement to print.
    * @param string $keyword
    *   Keyword to print, 'if', 'else', or 'elseif'.
@@ -1060,23 +997,23 @@ class DrupalPrettyPrinter extends Standard {
   }
 
   /**
-   * Overrides printing of use statement to include HTML.
+   * Add HTML to either UseUse or UseItem, depending on version.
    */
-  protected function pStmt_UseUse(UseUse $node) {
-    if (!$this->isHtml) {
-      return parent::pStmt_UseUse($node);
-    }
-
+  protected function addHtmlToUseItem(Node $node): string {
     $alias = $node->alias ? $node->alias->toString() : '';
-    return $this->pOurUsetype($node->type) .
+    $parts = $node->getParts();
+    return $this->pUseType($node->type) .
       '<span class="php-function-or-constant">' . $this->p($node->name) . '</span>' .
-      (($alias && $node->name->getLast() !== $alias) ? ' <span class="php-keyword">as</span> <span class="php-function-or-constant">' . $alias . '</span>' : '');
+      (($alias && array_pop($parts) !== $alias) ? ' <span class="php-keyword">as</span> <span class="php-function-or-constant">' . $alias . '</span>' : '');
   }
 
   /**
-   * The original pUsetype function was private, so we had to make our own.
+   * Overrides printing of use statement to include HTML.
    */
-  protected function pOurUseType($type) {
+  protected function pUseType(int $type): string {
+    if (!$this->isHtml) {
+      return parent::pUseType($type);
+    }
     $keyword = $type === Use_::TYPE_FUNCTION ? 'function'
       : ($type === Use_::TYPE_CONSTANT ? 'const' : '');
     if (!$keyword || !$this->isHtml) {
