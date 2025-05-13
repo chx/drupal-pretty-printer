@@ -11,4 +11,3 @@ $stmts = $parser->parse($file);
 $printer = new DrupalPrettyPrinter(['html' => FALSE]);
 $output = $printer->prettyPrintFile($stmts);
 file_put_contents('user1.module', $output);
-
