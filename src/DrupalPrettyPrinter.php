@@ -94,7 +94,8 @@ class DrupalPrettyPrinter extends Standard {
    *     array(), for unspecified arrays. Default is TRUE, unlike the base
    *     class.
    *   - html: TRUE (default) to add HTML spans to the code.
-   *   - isDrupal: TRUE (default) if this is Drupal code.
+   *   - isDrupal: TRUE (default) if this is Drupal code. Note this has no
+   *     effect if the "html" option is FALSE.
    */
   public function __construct(array $options = []) {
     $options += [
