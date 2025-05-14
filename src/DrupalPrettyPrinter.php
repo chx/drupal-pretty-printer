@@ -927,11 +927,17 @@ class DrupalPrettyPrinter extends Standard {
       $amp = '&';
     }
 
-    return $function . ($node->byRef ? $amp : '') .
+    $returnType = NULL !== $node->returnType ? ' : ' . $this->p($node->returnType) : '';
+    $output = $function . ($node->byRef ? $amp : '') .
       $name_span . $node->name . $name_end_span .
       '(' . $this->pCommaSeparated($node->params) . ')' .
-      (NULL !== $node->returnType ? ' : ' . $this->p($node->returnType) : '') .
-      ' {' . $this->pStmts($node->stmts) . $this->nl . '}';
+      $returnType;
+    if (!$this->isHtml && strlen($output) > 80) {
+      $output = $function . ($node->byRef ? $amp : '') . $node->name .
+        '(' . $this->pCommaSeparatedMultiLine($node->params, TRUE) . ')' .
+        $returnType;
+    }
+    return $output . ' {' . $this->pStmts($node->stmts) . $this->nl . '}';
   }
 
   /**
