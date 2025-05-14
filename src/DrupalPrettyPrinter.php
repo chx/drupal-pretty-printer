@@ -934,7 +934,7 @@ class DrupalPrettyPrinter extends Standard {
       $returnType;
     if (!$this->isHtml && strlen($output) > 80) {
       $output = $function . ($node->byRef ? $amp : '') . $node->name .
-        '(' . $this->pCommaSeparatedMultiLine($node->params, TRUE) . ')' .
+        '(' . $this->nl . $this->pCommaSeparatedMultiLine($node->params, TRUE) . ')' .
         $returnType;
     }
     return $output . ' {' . $this->pStmts($node->stmts) . $this->nl . '}';
