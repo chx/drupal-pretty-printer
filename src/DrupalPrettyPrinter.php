@@ -144,7 +144,7 @@ class DrupalPrettyPrinter extends Standard {
    *   A list of two elements. The first element is the printer. The second
    *   element is the list of statement objects.
    */
-  public static function createForFormatPreserving(string $code, array $options = []): array {
+  public static function getPrinterAndParse(string $code, array $options = []): array {
     $printer = new static($options);
     if (class_exists(\PhpParser\Parser\Php8::class)) {
       $parser = (new ParserFactory())->createForNewestSupportedVersion();
