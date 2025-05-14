@@ -6,7 +6,6 @@ namespace DrupalPrettyPrinter;
 
 use PhpParser\Node\Expr\Cast;
 use PhpParser\Node\Scalar\Encapsed;
-use PhpParser\Node\Scalar\Int_;
 use PhpParser\Node\Scalar\MagicConst;
 use PhpParser\Node\Stmt;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Alias;
@@ -41,8 +40,10 @@ use PhpParser\Node\Stmt\InlineHTML;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Stmt\UseUse;
+use PhpParser\NodeTraverser;
+use PhpParser\NodeVisitor\CloningVisitor;
+use PhpParser\ParserFactory;
 use PhpParser\PrettyPrinter\Standard;
-use PhpParser\PrettyPrinterAbstract;
 use PhpParser\Node\Scalar;
 
 /**
@@ -98,6 +99,10 @@ class DrupalPrettyPrinter extends Standard {
    */
   protected bool $isDrupal;
 
+  protected array $origStmts;
+
+  protected array $oldTokens;
+
   /**
    * Constructs an ApiPrettyPrinter object.
    *
@@ -119,6 +124,38 @@ class DrupalPrettyPrinter extends Standard {
     ];
 
     parent::__construct($options);
+  }
+
+  /**
+   * Creates a format preserving printer.
+   *
+   * @param string $code
+   *   The code to be parsed.
+   * @param array $options
+   *   Array of options, including:
+   *   - shortArraySyntax: TRUE to use [] when printing arrays instead of
+   *     array(), for unspecified arrays. Default is TRUE, unlike the base
+   *     class.
+   *   - html: TRUE to add HTML spans to the code.
+   *   - isDrupal: TRUE (default) if this is Drupal code. Note this has no
+   *     effect if the "html" option is FALSE.
+   *
+   * @return array
+   *   A list of two elements. The first element is the printer. The second
+   *   element is the list of statement objects.
+   */
+  public static function createForFormatPreserving(string $code, array $options = []): array {
+    $parser = (new ParserFactory())->createForHostVersion();
+    $printer = new static($options);
+    $printer->origStmts = $parser->parse($code);
+    $printer->oldTokens = $parser->getTokens();
+    // Run CloningVisitor before making changes to the AST.
+    $traverser = new NodeTraverser(new CloningVisitor());
+    return [$printer, $traverser->traverse($printer->origStmts)];
+  }
+
+  public function printFormatPreserving(array $stmts, ?array $origStmts = NULL, ?array $origTokens = NULL): string {
+    return parent::printFormatPreserving($stmts, $origStmts ?? $this->origStmts, $origTokens ?? $this->oldTokens);
   }
 
   /**
