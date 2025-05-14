@@ -145,10 +145,24 @@ class DrupalPrettyPrinter extends Standard {
    *   element is the list of statement objects.
    */
   public static function createForFormatPreserving(string $code, array $options = []): array {
-    $parser = (new ParserFactory())->createForHostVersion();
     $printer = new static($options);
-    $printer->origStmts = $parser->parse($code);
-    $printer->oldTokens = $parser->getTokens();
+    if (class_exists(\PhpParser\Parser\Php8::class)) {
+      $parser = (new ParserFactory())->createForNewestSupportedVersion();
+      $printer->origStmts = $parser->parse($code);
+      $printer->oldTokens = $parser->getTokens();
+    }
+    else {
+      $lexer = new \PhpParser\Lexer\Emulative([
+        'usedAttributes' => [
+          'comments',
+          'startLine', 'endLine',
+          'startTokenPos', 'endTokenPos',
+        ],
+      ]);
+      $parser = new \PhpParser\Parser\Php7($lexer);
+      $printer->origStmts = $parser->parse($code);
+      $printer->oldTokens = $lexer->getTokens();
+    }
     // Run CloningVisitor before making changes to the AST.
     $traverser = new NodeTraverser(new CloningVisitor());
     return [$printer, $traverser->traverse($printer->origStmts)];
