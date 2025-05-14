@@ -7,9 +7,9 @@ Recommended usage:
 [$printer, $stmts] = DrupalPrettyPrinter::getPrinterAndParse($code);
 ````
 
-This parses the code and returns the printer and the parsed statements. It recognizes PHP 8.2 syntax for parsing.
-The printer is ready for a `$printer->printFormatPreserving($stmts)` call, however this seems to only work well with
-nikic/php-parser v5. In my testing, for v4 the output was the same as with `$printer->prettyPrintFile($stmts)`.
+This parses the code and returns the printer and the parsed statements. It recognizes PHP 8.2 syntax for parsing
+or later with the `nikic/php-parser` v5. The printer is ready for a `$printer->printFormatPreserving($stmts)` call,
+unlike with the standard printer, no other arguments are needed.
 
 Of course, a simple
 

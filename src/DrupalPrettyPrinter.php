@@ -164,7 +164,8 @@ class DrupalPrettyPrinter extends Standard {
       $printer->oldTokens = $lexer->getTokens();
     }
     // Run CloningVisitor before making changes to the AST.
-    $traverser = new NodeTraverser(new CloningVisitor());
+    $traverser = new NodeTraverser();
+    $traverser->addVisitor(new CloningVisitor());
     return [$printer, $traverser->traverse($printer->origStmts)];
   }
 
