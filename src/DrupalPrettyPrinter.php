@@ -143,6 +143,8 @@ class DrupalPrettyPrinter extends Standard {
    * @return array
    *   A list of two elements. The first element is the printer. The second
    *   element is the list of statement objects.
+   *
+   * @phpstan-return array{\DrupalPrettyPrinter\DrupalPrettyPrinter, \PhpParser\Node\Stmt[]}
    */
   public static function getPrinterAndParse(string $code, array $options = []): array {
     $printer = new static($options);
@@ -169,6 +171,12 @@ class DrupalPrettyPrinter extends Standard {
     return [$printer, $traverser->traverse($printer->origStmts)];
   }
 
+  /**
+   * {inheritdoc}
+   *
+   * Unlike parent, this method can be called with just $stmts if the printer
+   * was created with the ::getPrinterAndParse factory method.
+   */
   public function printFormatPreserving(array $stmts, ?array $origStmts = NULL, ?array $origTokens = NULL): string {
     return parent::printFormatPreserving($stmts, $origStmts ?? $this->origStmts, $origTokens ?? $this->oldTokens);
   }
