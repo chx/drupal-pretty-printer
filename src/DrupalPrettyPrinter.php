@@ -17,7 +17,6 @@ use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Scalar\String_;
 use PhpParser\Node\Stmt\Nop;
-use PhpParser\Node\Stmt\InlineHTML;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Stmt\UseUse;
@@ -216,11 +215,11 @@ class DrupalPrettyPrinter extends Standard {
 
     $p = $phptag . "\n\n" . $this->prettyPrint($stmts);
 
-    if ($stmts[0] instanceof InlineHTML) {
+    if ($stmts[0] instanceof Stmt\InlineHTML) {
       $p = preg_replace('/^' . preg_quote($phptag, '/') . '\s+' . preg_quote($phpendtag, '/') . '\n?/', '', $p);
     }
 
-    if ($stmts[count($stmts) - 1] instanceof InlineHTML) {
+    if ($stmts[count($stmts) - 1] instanceof Stmt\InlineHTML) {
       $p = preg_replace('/' . preg_quote($phptag, '/') . '$/', '', rtrim($p));
     }
 
@@ -256,11 +255,13 @@ class DrupalPrettyPrinter extends Standard {
     bool $parentFormatPreserved = false
   ): string {
     $args = func_get_args();
+    if (!$this->isHtml) {
+      return parent::p(... $args);
+    }
     $type = $node->getType();
     $type_pieces = explode('_', $type);
 
     if ($type == 'Stmt_If' || $type == 'Stmt_ElseIf' || $type == 'Stmt_Else') {
-      // Override of if-type statements even if it is not HTML.
       $keyword = strtolower(array_pop($type_pieces));
       return $this->printIfLike($node, $keyword);
     }
@@ -298,14 +299,13 @@ class DrupalPrettyPrinter extends Standard {
         // In all of these types, the parent class output starts with a PHP
         // keyword, possibly preceded by a space. Wrap the keyword in a span.
         $output = call_user_func_array([parent::class, 'p'], $args);;
-        $output = preg_replace('|^( *)([a-z]+)|', '$1<span class="php-keyword">$2</span>', $output);
-        return $output;
+        return preg_replace('|^( *)([a-z]+)|', '$1<span class="php-keyword">$2</span>', $output);
       }
 
     }
 
     // If we have not overridden anything and returned already, use the parent.
-    return call_user_func_array([parent::class, 'p'], $args);
+    return parent::p(... $args);
   }
 
   /**
@@ -1011,7 +1011,7 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides printing of start/end ?php tags to include HTML.
    */
-  protected function pStmt_InlineHTML(InlineHTML $node): string {
+  protected function pStmt_InlineHTML(Stmt\InlineHTML $node): string {
     if (!$this->isHtml) {
       return parent::pStmt_InlineHTML($node);
     }
