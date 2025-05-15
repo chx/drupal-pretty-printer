@@ -806,15 +806,15 @@ class DrupalPrettyPrinter extends Standard {
     return $output;
   }
 
-  protected function pStmt_If(Stmt\If_ $node) {
+  protected function pStmt_If(Stmt\If_ $node): string {
     return $this->printIfLike($node, 'if');
   }
 
-  protected function pStmt_ElseIf(Stmt\ElseIf_ $node) {
+  protected function pStmt_ElseIf(Stmt\ElseIf_ $node): string {
     return $this->printIfLike($node, 'elseif');
   }
 
-  protected function pStmt_Else(Stmt\Else_ $node) {
+  protected function pStmt_Else(Stmt\Else_ $node): string {
     return $this->printIfLike($node, 'else');
   }
 
