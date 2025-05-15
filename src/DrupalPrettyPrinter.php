@@ -261,11 +261,6 @@ class DrupalPrettyPrinter extends Standard {
     $type = $node->getType();
     $type_pieces = explode('_', $type);
 
-    if ($type == 'Stmt_If' || $type == 'Stmt_ElseIf' || $type == 'Stmt_Else') {
-      $keyword = strtolower(array_pop($type_pieces));
-      return $this->printIfLike($node, $keyword);
-    }
-
     $easy_types = ['Expr_Isset', 'Expr_List', 'Expr_Clone',
       'Expr_Include', 'Expr_Exit', 'Expr_Empty', 'Expr_Eval',
       'Stmt_For', 'Stmt_Foreach', 'Stmt_While', 'Stmt_Do',
@@ -276,15 +271,15 @@ class DrupalPrettyPrinter extends Standard {
       'Stmt_Unset',
     ];
 
-    if ($this->isHtml && !$this->state['in_string']) {
+    if (!$this->state['in_string']) {
       // Overrides of certain simple statements if we are adding HTML and
       // not currently printing a string.
       if ($node instanceof MagicConst) {
-        $output = call_user_func_array([parent::class, 'p'], $args);
+        $output = parent::p(... $args);
         return '<span class="php-keyword">' . $output . '</span>';
       }
       elseif ($type == 'Scalar_LNumber' || $type == 'Scalar_DNumber') {
-        $output = call_user_func_array([parent::class, 'p'], $args);;
+        $output = parent::p(... $args);
         return '<span class="php-constant">' . $output . '</span>';
       }
       elseif ($node instanceof Cast) {
@@ -292,13 +287,13 @@ class DrupalPrettyPrinter extends Standard {
         return $this->pPrefixOp(get_class($node), '(<span class="php-keyword">' . $cast_type . '</span>) ', $node->expr);
       }
       elseif ($type == 'Expr_ConstFetch') {
-        $output = call_user_func_array([parent::class, 'p'], $args);;
+        $output = parent::p(... $args);
         return '<span class="php-function-or-constant">' . $output . '</span>';
       }
       elseif (in_array($type, $easy_types)) {
         // In all of these types, the parent class output starts with a PHP
         // keyword, possibly preceded by a space. Wrap the keyword in a span.
-        $output = call_user_func_array([parent::class, 'p'], $args);;
+        $output = parent::p(... $args);
         return preg_replace('|^( *)([a-z]+)|', '$1<span class="php-keyword">$2</span>', $output);
       }
 
@@ -810,6 +805,19 @@ class DrupalPrettyPrinter extends Standard {
 
     return $output;
   }
+
+  protected function pStmt_If(Stmt\If_ $node) {
+    return $this->printIfLike($node, 'if');
+  }
+
+  protected function pStmt_ElseIf(Stmt\ElseIf_ $node) {
+    return $this->printIfLike($node, 'elseif');
+  }
+
+  protected function pStmt_Else(Stmt\Else_ $node) {
+    return $this->printIfLike($node, 'else');
+  }
+
 
   /**
    * Overrides new printing to add HTML.
