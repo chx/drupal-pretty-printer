@@ -10,16 +10,13 @@ use PhpParser\Node\Scalar\MagicConst;
 use PhpParser\Node\Stmt;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Alias;
 use PhpParser\Node\Stmt\TraitUseAdaptation\Precedence;
-use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\StaticPropertyFetch;
 use PhpParser\Node\Expr\PropertyFetch;
 use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Scalar\String_;
-use PhpParser\Node\Stmt\Nop;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
-use PhpParser\Node\Stmt\UseUse;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\CloningVisitor;
 use PhpParser\ParserFactory;
@@ -320,7 +317,7 @@ class DrupalPrettyPrinter extends Standard {
       $comments = $node->getComments();
       if ($comments) {
         $result .= $this->nl . $this->pComments($comments);
-        if ($node instanceof Nop) {
+        if ($node instanceof Stmt\Nop) {
           continue;
         }
       }
@@ -710,10 +707,10 @@ class DrupalPrettyPrinter extends Standard {
    *
    * @see self::pExprArrayItem
    */
-  protected function pExpr_Array(Array_ $node): string {
+  protected function pExpr_Array(Expr\Array_ $node): string {
     $isShortArraySyntax = $this->shortArraySyntax ?? $this->options['shortArraySyntax'];
     $syntax = $node->getAttribute('kind',
-      $isShortArraySyntax ? Array_::KIND_SHORT : Array_::KIND_LONG);
+      $isShortArraySyntax ? Expr\Array_::KIND_SHORT : Expr\Array_::KIND_LONG);
     if (empty($node->items)) {
       $items = '';
     }
@@ -721,7 +718,7 @@ class DrupalPrettyPrinter extends Standard {
       $items = $this->nl . $this->pCommaSeparatedMultiLine($node->items, TRUE);
     }
 
-    if ($syntax === Array_::KIND_SHORT) {
+    if ($syntax === Expr\Array_::KIND_SHORT) {
       return '[' . $items . ']';
     }
     else {
@@ -794,20 +791,18 @@ class DrupalPrettyPrinter extends Standard {
 
     $output .= ' {' . $this->pStmts($node->stmts) . $this->nl . '}';
 
-    if ($keyword == 'if') {
-      if (!is_null($node->elseifs)) {
-        $output .= $this->pImplode($node->elseifs);
-      }
-      if (!is_null($node->else)) {
-        $output .= $this->printIfLike($node->else, 'else');
-      }
-    }
-
     return $output;
   }
 
   protected function pStmt_If(Stmt\If_ $node): string {
-    return $this->printIfLike($node, 'if');
+    $output = $this->printIfLike($node, 'if');
+    if (!is_null($node->elseifs)) {
+      $output .= $this->pImplode($node->elseifs);
+    }
+    if (!is_null($node->else)) {
+      $output .= $this->printIfLike($node->else, 'else');
+    }
+    return $output;
   }
 
   protected function pStmt_ElseIf(Stmt\ElseIf_ $node): string {
@@ -1134,7 +1129,7 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides printing of use statement to include HTML.
    */
-  protected function pStmt_UseUse(UseUse $node) {
+  protected function pStmt_UseUse(Stmt\UseUse $node) {
     return $this->isHtml ? $this->addHtmlToUseItem($node) : parent::pStmt_UseUse($node);
   }
 
