@@ -617,7 +617,9 @@ class DrupalPrettyPrinter extends Standard {
       $name = $node->var->name;
     }
 
-    return ($node->type ? $this->p($node->type) . ' ' : '') .
+    return $this->pAttrGroups($node->attrGroups, true) .
+      $this->pModifiers($node->flags) .
+      ($node->type ? $this->p($node->type) . ' ' : '') .
       ($node->byRef ? htmlentities('&') : '') .
       ($node->variadic ? '...' : '') .
       ($name ? '<span class="php-variable">$' . $name . '</span>' : '') .
@@ -1074,6 +1076,18 @@ class DrupalPrettyPrinter extends Standard {
   }
 
   /**
+   * The original pUsetype function was private, so we had to make our own.
+   */
+  protected function pOurUseType($type) {
+    $keyword = $type === Stmt\Use_::TYPE_FUNCTION ? 'function'
+      : ($type === Stmt\Use_::TYPE_CONSTANT ? 'const' : '');
+    if (!$keyword || !$this->options['html']) {
+      return $keyword;
+    }
+    return '<span class="php-keyword">' . $keyword . '</span> ';
+  }
+
+  /**
    * Overrides printing of use statement to include HTML.
    */
   protected function pStmt_TraitUse(Stmt\TraitUse $node): string {
@@ -1145,7 +1159,7 @@ class DrupalPrettyPrinter extends Standard {
    */
   protected function addHtmlToUseItem(Node $node): string {
     $alias = $node->alias ? $node->alias->toString() : '';
-    $parts = $node->getParts();
+    $parts = $node->name->getParts();
     return $this->pUseType($node->type) .
       '<span class="php-function-or-constant">' . $this->p($node->name) . '</span>' .
       (($alias && array_pop($parts) !== $alias) ? ' <span class="php-keyword">as</span> <span class="php-function-or-constant">' . $alias . '</span>' : '');
