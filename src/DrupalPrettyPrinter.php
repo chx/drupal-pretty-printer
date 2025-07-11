@@ -281,7 +281,7 @@ class DrupalPrettyPrinter extends Standard {
       }
       elseif ($node instanceof Cast) {
         $cast_type = strtolower(array_pop($type_pieces));
-        return $this->pPrefixOp(get_class($node), '(<span class="php-keyword">' . $cast_type . '</span>) ', $node->expr);
+        return $this->pPrefixOp(get_class($node), '(<span class="php-keyword">' . $cast_type . '</span>) ', $node->expr, $precedence, $lhsPrecedence);
       }
       elseif ($type == 'Expr_ConstFetch') {
         $output = parent::p(... $args);
