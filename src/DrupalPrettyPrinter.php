@@ -707,7 +707,7 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides array printing to use multiple lines.
    *
-   * @see self::pExprArrayItem
+   * @see self::pArrayItem
    */
   protected function pExpr_Array(Expr\Array_ $node): string {
     $isShortArraySyntax = $this->shortArraySyntax ?? $this->options['shortArraySyntax'];
@@ -736,7 +736,7 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides printing of array items to include comments and track state.
    */
-  protected function pExpr_ArrayItem(Expr\ArrayItem $node) {
+  protected function pArrayItem(Node\ArrayItem $node): string {
     $result = '';
     $comments = $node->getAttribute('comments', []);
     if ($comments) {

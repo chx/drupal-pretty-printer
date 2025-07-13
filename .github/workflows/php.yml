@@ -14,18 +14,11 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        php-parser: ['^4.18', '^5']
-
     steps:
     - uses: actions/checkout@v4
 
     - name: Validate composer.json and composer.lock
       run: composer validate --strict
-
-    - name: Set up php-parser version
-      run: composer require "nikic/php-parser:${{ matrix.php-parser }}" --no-update
 
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress
