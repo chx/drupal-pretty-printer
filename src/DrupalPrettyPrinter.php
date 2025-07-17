@@ -706,7 +706,7 @@ class DrupalPrettyPrinter extends Standard {
    * @see self::pArrayItem
    */
   protected function pExpr_Array(Expr\Array_ $node): string {
-    $isShortArraySyntax = $this->shortArraySyntax ?? $this->options['shortArraySyntax'];
+    $isShortArraySyntax = $this->shortArraySyntax ?? $this->shortArraySyntax;
     $syntax = $node->getAttribute('kind',
       $isShortArraySyntax ? Expr\Array_::KIND_SHORT : Expr\Array_::KIND_LONG);
     if (empty($node->items)) {
@@ -1077,7 +1077,7 @@ class DrupalPrettyPrinter extends Standard {
   protected function pOurUseType($type) {
     $keyword = $type === Stmt\Use_::TYPE_FUNCTION ? 'function'
       : ($type === Stmt\Use_::TYPE_CONSTANT ? 'const' : '');
-    if (!$keyword || !$this->options['html']) {
+    if (!$keyword || !$this->isHtml) {
       return $keyword;
     }
     return '<span class="php-keyword">' . $keyword . '</span> ';
