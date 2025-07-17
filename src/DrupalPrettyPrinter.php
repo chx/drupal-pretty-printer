@@ -418,19 +418,15 @@ class DrupalPrettyPrinter extends Standard {
   /**
    * Overrides string printing to add HTML spans.
    */
-  protected function pScalar_Encapsed(Encapsed $node) {
-    return $this->isHtml ? $this->addHtmlToEncapsed($node) : parent::pScalar_Encapsed($node);
-  }
-
   protected function pScalar_InterpolatedString(Scalar\InterpolatedString $node): string {
-    return $this->isHtml ? $this->addHtmlToEncapsed($node) : parent::pScalar_InterpolatedString($node);
+    return $this->isHtml ? $this->addHtmlToInterpolatedString($node) : parent::pScalar_InterpolatedString($node);
   }
 
-  protected function addHtmlToEncapsed(Node $node) {
+  protected function addHtmlToInterpolatedString(Node $node) {
     unset($this->state['last_string']);
 
     if ($node->getAttribute('kind') === String_::KIND_HEREDOC) {
-      return htmlentities(parent::pScalar_Encapsed($node));
+      return htmlentities(parent::pScalar_InterpolatedString($node));
     }
 
     // Change the state to record we are inside a string.
